@@ -1,0 +1,24 @@
+# Secrets — never commit
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime data (local fallback storage)
+demo/listings.json
+
+# macOS
+.DS_Store
+
+# Internal hackathon prep docs — kept local, not part of the open-source project
+dev_post.md
+dev_post_PASTE.md
+pitch_3min.md
+pitch_90s.md
+qa_prep.md
+submit_checklist.md
+FINAL_DELIVERY.md
+value_prop.md
+demo_script.md

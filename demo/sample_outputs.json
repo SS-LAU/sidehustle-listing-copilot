@@ -1,0 +1,34 @@
+[
+  {
+    "keywords": "handmade ceramic mug, minimalist, gift",
+    "platform": "Etsy",
+    "tone": "friendly",
+    "model": "gemma3:4b",
+    "elapsed_sec": 6.25,
+    "price_stats": null,
+    "listing": {
+      "title": "Handmade Ceramic Mug - Minimalist Gift for Coffee Lovers - Warm Drink Mug - Unique Handmade Pottery",
+      "description": "Start your day with a touch of calm and beauty with our handcrafted ceramic mug. This minimalist mug is perfect for enjoying your favorite hot beverage – coffee, tea, or hot chocolate – and adds a warm, inviting feel to any space. It’s lovingly made by hand, ensuring a truly unique piece with subtle variations that make it extra special.\n\nLooking for a thoughtful gift? This handmade ceramic mug is a wonderful present for birthdays, holidays, or just because! It’s a beautiful way to show someone you care.  Each mug is carefully packaged and ready to delight.\n\nDon't miss out on adding this gorgeous piece to your collection! Click 'Add to Cart' now and treat yourself or someone special to this delightful handmade ceramic mug.  We know you’ll love it!",
+      "tags": [
+        "ceramic mug", "handmade mug", "minimalist mug", "gift for her", "gift for him",
+        "coffee mug", "tea mug", "unique mug", "pottery mug", "handmade pottery",
+        "ceramic gift", "warm mug"
+      ]
+    }
+  },
+  {
+    "keywords": "vintage leather wallet, men, gift",
+    "platform": "eBay",
+    "tone": "professional",
+    "model": "gemma3:4b",
+    "price_stats": null,
+    "listing": {
+      "title": "Vintage Leather Wallet for Men - Genuine Leather Bi-Fold, Slim Bifold Purse, Gift",
+      "description": "Elevate your everyday carry with this authentic vintage leather wallet, crafted for men who value durability and understated style. Made from full-grain genuine leather, it softens with use to develop a rich, one-of-a-kind patina.\n\nThe slim bi-fold design holds cards, IDs and folded bills without bulk, while secure stitching ensures long-lasting structure. Ideal as a gift for Father's Day, holidays or birthdays.\n\nShips promptly in protective packaging. Browse our store for more vintage leather accessories.",
+      "tags": [
+        "leather wallet", "men wallet", "vintage leather", "bifold wallet", "genuine leather",
+        "mens gift", "slim wallet", "leather purse", "wallet gift", "classic wallet"
+      ]
+    }
+  }
+]

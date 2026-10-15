@@ -1,0 +1,35 @@
+# Render deployment blueprint (web layer).
+#
+# IMPORTANT — this is a DEMO-MODE deployment.
+# The real inference engine is a LOCAL Ollama instance on the user's own machine.
+# Render has no GPU and no local Ollama, so this blueprint intentionally ships the UI only:
+#   * the cloud instance serves the frontend, /health, and /demo/sample_outputs.json
+#   * clicking "Generate" on the cloud instance fails fast and honestly (HTTP 503); the UI
+#     shows a friendly hint plus a "Demo" button that loads the bundled offline sample.
+# To run real inference in the cloud, point OLLAMA_BASE at a reachable GPU host and set
+# OLLAMA_MODEL to a model that exists there (see README "Deploy to Render (demo mode)").
+services:
+  - type: web
+    name: sidehustle-listing-copilot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # /health ALWAYS returns 200 (even when Ollama is unreachable), so the free-tier
+    # health check never fails and the deploy never gets marked unhealthy. Do not change.
+    healthCheckPath: /health
+    envVars:
+      # Intentionally unreachable on Render -> triggers the honest "Ollama offline" path.
+      # The TCP connect is refused immediately (no 120s hang): app/ollama_client.py caps the
+      # connect timeout at 5s while keeping the read timeout separate.
+      - key: OLLAMA_BASE
+        value: http://localhost:11434
+      - key: OLLAMA_MODEL
+        value: gemma3:4b
+      # Per-request READ timeout for a single generation (in seconds). Only relevant if you
+      # wire a reachable remote Ollama; connect failures are already capped at 5s in code.
+      - key: OLLAMA_TIMEOUT
+        value: "120"
+      # Optional (leave unset to keep graceful degradation):
+      #   SERPAPI_KEY  -> enables competitor price lookup, otherwise the pricing block hides
+      #   MONGODB_URI  -> enables MongoDB Atlas storage, otherwise saves fall back to local JSON
+    plan: free

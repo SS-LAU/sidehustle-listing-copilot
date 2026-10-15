@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Side Hustle · Listing Copilot</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #1a1d24;
+    --panel-2: #232733;
+    --text: #e8ebf2;
+    --muted: #8a90a3;
+    --accent: #6c5ce7;
+    --accent-2: #00c6a8;
+    --err: #ff6b6b;
+    --ok: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5; min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 90px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  h1 { font-size: 24px; margin: 0; font-weight: 700; }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sub { color: var(--muted); font-size: 14px; margin: 4px 0 24px; }
+  .pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel); border: 1px solid #2a2e3a; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--ok); }
+  .dot.warn { background: #f5a623; }
+  .dot.err { background: var(--err); }
+  .card { background: var(--panel); border: 1px solid #2a2e3a; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 8px; }
+  input[type="text"], select {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #333848;
+    background: var(--panel-2); color: var(--text); font-size: 15px; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 14px; margin-bottom: 14px; }
+  .row > div { flex: 1; }
+  .actions { display: flex; gap: 10px; margin-top: 4px; }
+  button {
+    padding: 12px 18px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: transform .05s ease, opacity .2s;
+  }
+  button:active { transform: scale(.98); }
+  .primary { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #fff; flex: 1; }
+  .ghost { background: var(--panel-2); color: var(--text); border: 1px solid #333848; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .out { display: none; }
+  .out.show { display: block; }
+  .field { margin-bottom: 18px; }
+  .field h3 { margin: 0 0 6px; font-size: 14px; color: var(--accent-2); text-transform: uppercase; letter-spacing: .04em; }
+  .field .val { font-size: 16px; white-space: pre-wrap; word-break: break-word; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag { background: var(--panel-2); border: 1px solid #333848; padding: 4px 10px; border-radius: 999px; font-size: 13px; color: var(--muted); }
+  .price { display: none; background: var(--panel-2); border: 1px dashed #3a3f4f; border-radius: 10px; padding: 12px 14px; font-size: 14px; color: var(--muted); }
+  .price.show { display: block; }
+  .price b { color: var(--text); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .err-box { display: none; background: #3a1d1d; border: 1px solid #5a2a2a; color: #ffb3b3; padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  .err-box.show { display: block; }
+  .ok-box { display: none; background: #16301f; border: 1px solid #245c35; color: #a9f3c1; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+  .ok-box.show { display: block; }
+  .footer {
+    position: fixed; right: 14px; bottom: 12px; font-size: 11px; color: var(--muted);
+    background: rgba(26,29,36,.85); padding: 5px 10px; border-radius: 8px; border: 1px solid #2a2e3a;
+    backdrop-filter: blur(4px);
+  }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .caret { display: inline-block; width: 8px; background: var(--accent-2); animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Listing <span class="grad">Copilot</span></h1>
+    </div>
+    <span class="pill"><span id="hud" class="dot"></span><span id="hudText">checking…</span></span>
+  </header>
+  <p class="sub">Turn product keywords into a high-converting Etsy / eBay listing — powered by on-device open-source AI.</p>
+
+  <div class="card">
+    <label for="kw">Product keywords</label>
+    <input id="kw" type="text" placeholder="e.g. handmade ceramic mug, minimalist, gift" value="handmade ceramic mug, minimalist, gift" />
+    <div class="row" style="margin-top:14px">
+      <div>
+        <label for="platform">Marketplace</label>
+        <select id="platform">
+          <option value="Etsy">Etsy</option>
+          <option value="eBay">eBay</option>
+        </select>
+      </div>
+      <div>
+        <label for="tone">Brand tone</label>
+        <select id="tone">
+          <option value="friendly">Friendly</option>
+          <option value="professional">Professional</option>
+          <option value="playful">Playful</option>
+          <option value="luxury">Luxury</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="gen" class="primary">Generate listing</button>
+      <button id="save" class="ghost" disabled>Save</button>
+      <button id="demo" class="ghost" title="Load a sample output (offline fallback)">Demo</button>
+    </div>
+  </div>
+
+  <div id="err" class="err-box"></div>
+  <div id="ok" class="ok-box"></div>
+
+  <div class="card out" id="resultCard">
+    <div id="thinking" style="display:none;color:var(--muted);font-size:14px">
+      <span class="spinner"></span>Generating on-device…
+    </div>
+    <div id="result">
+      <div class="field"><h3>Title</h3><div class="val" id="title"></div></div>
+      <div class="field"><h3>Description</h3><div class="val" id="desc"></div></div>
+      <div class="field"><h3>Search tags</h3><div class="tags" id="tags"></div></div>
+      <div class="price" id="price"></div>
+      <div class="note" id="meta"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">100% on-device · Gemma 3 · $0 API</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// fetch demo sample bundled on the server (offline fallback)
+async function loadDemo() {
+  const r = await fetch('/demo/sample_outputs.json');
+  return r.json();
+}
+
+function showErr(msg) { const e = $('err'); e.textContent = msg; e.classList.add('show'); }
+function clearBoxes() { $('err').classList.remove('show'); $('ok').classList.remove('show'); }
+function showOk(msg) { const o = $('ok'); o.textContent = msg; o.classList.add('show'); setTimeout(() => o.classList.remove('show'), 2600); }
+
+// typewriter for a text element
+function typeInto(el, full, speed = 8) {
+  return new Promise((resolve) => {
+    el.textContent = '';
+    let i = 0;
+    const caret = document.createElement('span'); caret.className = 'caret';
+    el.appendChild(caret);
+    const timer = setInterval(() => {
+      if (i < full.length) {
+        caret.insertAdjacentText('beforebegin', full[i]); i++;
+      } else { clearInterval(timer); resolve(); }
+    }, speed);
+  });
+}
+
+let lastListing = null;
+
+function renderPrice(ps) {
+  const p = $('price');
+  if (ps && ps.count > 0) {
+    p.innerHTML = `Competitor price range (SerpApi): <b>$${ps.min} – $${ps.max}</b> · median <b>$${ps.median}</b> · ${ps.count} listings`;
+    p.classList.add('show');
+  } else { p.classList.remove('show'); }
+}
+
+function renderListing(listing, metaText) {
+  lastListing = listing;
+  clearBoxes();
+  $('resultCard').classList.add('show');
+  $('tags').innerHTML = (listing.tags || []).map(t => `<span class="tag">#${t}</span>`).join('');
+  renderPrice(null);
+  $('meta').textContent = metaText || '';
+  $('save').disabled = false;
+  typeInto($('title'), listing.title || '');
+  typeInto($('desc'), listing.description || '', 5);
+}
+
+function setBusy(busy) {
+  $('gen').disabled = busy; $('save').disabled = busy || !lastListing;
+  $('thinking').style.display = busy ? 'block' : 'none';
+  $('gen').innerHTML = busy ? '<span class="spinner"></span>Generating' : 'Generate listing';
+}
+
+async function onGenerate() {
+  clearBoxes();
+  const body = {
+    keywords: $('kw').value.trim(),
+    platform: $('platform').value,
+    tone: $('tone').value,
+  };
+  if (!body.keywords) { showErr('Please enter at least one product keyword.'); return; }
+  setBusy(true);
+  $('resultCard').classList.add('show');
+  try {
+    const r = await fetch('/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      // The model runs locally on the user's own machine. On a hosted demo instance it is
+      // unreachable, so show a clear, actionable English message instead of a blank screen.
+      console.error('generate failed:', r.status, data);
+      showErr('The AI model is offline. It runs locally on your own machine — start Ollama, '
+              + 'or click "Demo" to load a bundled offline sample.');
+      return;
+    }
+    renderListing(data.listing, `model: ${data.model || ''} · ${data.elapsed_sec}s`);
+    renderPrice(data.price_stats);
+    if (data.price_stats && data.price_stats.count > 0) {} // already rendered
+  } catch (e) {
+    showErr('Network error: ' + e.message + ' — try the Demo button for an offline sample.');
+  } finally { setBusy(false); }
+}
+
+async function onSave() {
+  if (!lastListing) return;
+  try {
+    const r = await fetch('/api/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: lastListing.title, description: lastListing.description, tags: lastListing.tags })
+    });
+    const d = await r.json();
+    if (r.ok) showOk(`Saved to ${d.storage} (${d.id})`);
+    else showErr(d.error || 'Save failed.');
+  } catch (e) { showErr('Save failed: ' + e.message); }
+}
+
+async function onDemo() {
+  try {
+    const arr = await loadDemo();
+    const item = Array.isArray(arr) ? arr[arr.length - 1] : arr;
+    const listing = item.listing || item;
+    renderListing(listing, 'offline sample · demo/sample_outputs.json');
+    renderPrice(item.price_stats);
+    $('meta').textContent = 'OFFLINE SAMPLE · demo/sample_outputs.json (used when Ollama is down)';
+  } catch (e) { showErr('No demo sample available: ' + e.message); }
+}
+
+async function checkHealth() {
+  const dot = $('hud'), txt = $('hudText');
+  try {
+    const r = await fetch('/health'); const d = await r.json();
+    if (d.ollama && d.ollama.up && d.ollama.model_ready) { dot.className = 'dot ok'; txt.textContent = d.ollama.model + ' ready'; }
+    else if (d.ollama && d.ollama.up) { dot.className = 'dot warn'; txt.textContent = (d.ollama.model || 'model') + ' missing — use Demo'; }
+    else { dot.className = 'dot err'; txt.textContent = 'Ollama offline — use Demo'; }
+  } catch (e) { dot.className = 'dot err'; txt.textContent = 'server unreachable'; }
+}
+
+$('gen').addEventListener('click', onGenerate);
+$('save').addEventListener('click', onSave);
+$('demo').addEventListener('click', onDemo);
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'kw') onGenerate(); });
+checkHealth();
+</script>
+</body>
+</html>
