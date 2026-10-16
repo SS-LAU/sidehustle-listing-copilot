@@ -17,11 +17,18 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 KEYWORDS = "handmade ceramic mug, minimalist, gift"
 
+# Resolve .env against THIS script's project root, never the current working
+# directory. Running the script from another cwd (e.g. ~) used to silently
+# report the keys as "missing" because it looked for ./.env.
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 
-def load_env_keys(path=".env"):
+
+def load_env_keys(path=None):
+    path = Path(path) if path else _ENV_PATH
     keys = {}
     try:
         with open(path, encoding="utf-8") as f:
@@ -29,7 +36,7 @@ def load_env_keys(path=".env"):
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    keys[k.strip()] = v.strip()
+                    keys[k.strip()] = v.strip().strip('"').strip("'")
     except FileNotFoundError:
         return {}
     return keys
@@ -51,13 +58,18 @@ def main():
     base = args.base
     results = []
 
+    env_found = _ENV_PATH.exists()
+    print(f".env path: {_ENV_PATH}  [{'found' if env_found else 'NOT FOUND'}]")
+    print(f"API base : {base}\n")
+
     env = load_env_keys()
+    missing = "" if env_found else f"（搵唔到 {_ENV_PATH}）"
     serp_key = bool(env.get("SERPAPI_KEY"))
     mongo_uri = bool(env.get("MONGODB_URI"))
     results.append((".env SERPAPI_KEY 已填", serp_key,
-                    "未填 → 定價層會自動隱藏（要報 SerpApi 分類必須填）" if not serp_key else "OK"))
+                    f"未填{missing} → 定價層會自動隱藏（要報 SerpApi 分類必須填）" if not serp_key else "OK"))
     results.append((".env MONGODB_URI 已填", mongo_uri,
-                    "未填 → 存檔會降級到本地 JSON（要報 MongoDB 分類必須填）" if not mongo_uri else "OK"))
+                    f"未填{missing} → 存檔會降級到本地 JSON（要報 MongoDB 分類必須填）" if not mongo_uri else "OK"))
 
     try:
         health = req("GET", base, "/health", timeout=10)
