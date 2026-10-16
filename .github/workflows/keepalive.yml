@@ -1,0 +1,40 @@
+name: Keep the Render demo awake
+
+# Render's free tier spins a web service down after ~15 minutes with no traffic, and the
+# next request then takes 30-60s to cold-start. Anyone opening the live demo link shouldn't
+# hit that wait, so ping /health on a schedule. GitHub's shortest reliable cron interval is
+# 5 minutes, which is comfortably inside Render's 15-minute idle window.
+#
+# Notes:
+#   - GitHub disables scheduled workflows in public repos after 60 days without repository
+#     activity. Re-enable it from the Actions tab if that ever happens.
+#   - Delete this file if you would rather let the instance sleep (it costs nothing to run,
+#     but a permanently-awake service consumes the whole free monthly instance-hour budget).
+#   - /health always returns 200, even when Ollama is unreachable, so this is a pure
+#     liveness probe and never depends on the model being available.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health
+        run: |
+          set -euo pipefail
+          URL="https://sidehustle-listing-copilot.onrender.com/health"
+          # -m 120 covers a cold start; --retry covers a transient error while booting.
+          code=$(curl -sS -o /dev/null -m 120 --retry 2 --retry-delay 10 \
+            -w '%{http_code}' "$URL")
+          echo "GET $URL -> HTTP $code"
+          test "$code" = "200"

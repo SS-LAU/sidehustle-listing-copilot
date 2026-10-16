@@ -29,7 +29,16 @@ services:
       # wire a reachable remote Ollama; connect failures are already capped at 5s in code.
       - key: OLLAMA_TIMEOUT
         value: "120"
-      # Optional (leave unset to keep graceful degradation):
-      #   SERPAPI_KEY  -> enables competitor price lookup, otherwise the pricing block hides
-      #   MONGODB_URI  -> enables MongoDB Atlas storage, otherwise saves fall back to local JSON
+      # --- Optional integrations -------------------------------------------------------
+      # SerpApi and MongoDB Atlas are both cloud services, so unlike Ollama they DO work
+      # from Render. Declared with `sync: false` so no secret ever lands in git: Render
+      # prompts for the value in the dashboard on sync and stores it encrypted afterwards.
+      # Leave a value blank in the dashboard to keep the graceful-degradation path
+      # (the pricing block hides / saves fall back to local JSON).
+      - key: SERPAPI_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: sidehustle
     plan: free

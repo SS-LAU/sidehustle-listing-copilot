@@ -83,6 +83,27 @@ In short: on Render this is a **UI demo / showcase deployment, not a hosted mode
    the free-tier health check never fails.
 5. Open the service URL → the UI loads. Click **Demo** for the offline sample.
 
+### Optional: turn on SerpApi + MongoDB on the deployed instance
+Both are cloud services, so — unlike Ollama — they *do* work from Render. They are declared in
+`render.yaml` with `sync: false`, which means the value is **never committed to git**: Render
+prompts for it in the dashboard on sync and stores it encrypted afterwards.
+
+Set them under **Dashboard → your service → Environment**:
+
+| Variable | What it turns on |
+|---|---|
+| `SERPAPI_KEY` | Live competitor pricing (Google Shopping) rendered next to the generated listing |
+| `MONGODB_URI` | The **Save** button writes to MongoDB Atlas instead of the local JSON fallback |
+
+Leave either one blank to keep the graceful-degradation path. To check what the deployed
+instance actually reports:
+
+```bash
+curl https://<your-service>.onrender.com/health
+# "storage": "mongodb"      <- MongoDB Atlas is wired up
+# "serpapi_enabled": true   <- SerpApi is wired up
+```
+
 ### Optional: real inference in the cloud
 If you have a GPU host running Ollama, set these env vars on the Render service and "Generate"
 works end-to-end:
@@ -91,6 +112,8 @@ works end-to-end:
 
 ### Notes
 - Render free tier spins down after ~15 min of inactivity; the next request is a cold start.
+  `.github/workflows/keepalive.yml` pings `/health` every 5 minutes to keep the demo awake
+  during judging — delete that workflow if you'd rather let the instance sleep.
 - `OLLAMA_BASE` is intentionally unreachable in demo mode so the failure is honest and instant
   (the TCP connect is capped at 5s in `app/ollama_client.py`, so it never hangs).
 
