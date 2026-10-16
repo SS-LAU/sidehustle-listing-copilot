@@ -1,59 +1,61 @@
 # Side Hustle · Listing Copilot
 
-> 一句話：Etsy / eBay 賣家的 AI 上架文案 + 定價副手——輸入商品關鍵字，**本地 Gemma** 即刻生成高轉換標題／描述／標籤，全程 100% 離機推理、零 API 成本。
+> In one line: an AI listing-copy + pricing copilot for Etsy / eBay sellers — type in product keywords and a **local Gemma** model instantly writes a high-converting title / description / tags, running 100% on-device with zero API cost.
 
-## 功能
-- **核心鏈路**：關鍵字 → Ollama 本地模型（JSON mode）→ `{title, description, tags}`
-- 平台（Etsy / eBay）與語氣（friendly / professional / playful / luxury）自訂
-- 前端**打字機逐字輸出**、右下角固定小字 `100% on-device · Gemma 3 · $0 API`
-- 無 Ollama / 模型缺失 / 超時 → 前端友好提示，不白屏；可點「Demo」用離線樣本兜底
+## Features
+- **Core pipeline**: keywords → local Ollama model (JSON mode) → `{title, description, tags}`
+- 10–13 lowercase search tags, each ≤ 20 characters, with no `#` (Etsy search doesn't treat hashtags as tags, and eBay has no tag field at all). The UI renders them as `#chip` labels because that's how people read them, but the underlying values are exactly what a seller pastes into Etsy.
+- Customisable marketplace (Etsy / eBay) and brand tone (friendly / professional / playful / luxury)
+- Frontend **typewriter output**, with a fixed `100% on-device · Gemma 3 · $0 API` badge in the bottom-right corner
+- No Ollama / missing model / timeout → friendly frontend message, never a blank screen; the **Demo** button loads a bundled offline sample as a fallback
 
-## 安裝
+## Install
 ```bash
 cd sidehustle-listing-copilot
-/Users/sum/.workbuddy-ai/binaries/python/versions/3.13.12/bin/python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-/Applications/Ollama.app/Contents/Resources/ollama pull gemma3:4b   # 約 3.4GB
+ollama pull gemma3:4b            # ~3.4 GB
 ```
 
-## 啟動
+## Run
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --port 8000
-# 瀏覽器開 http://localhost:8000
+# open http://localhost:8000 in your browser
 ```
 
-## 環境變數（全部選填，缺省即可跑）
-| 變數 | 預設 | 說明 |
+## Environment variables (all optional — the app runs without any of them)
+| Variable | Default | Description |
 |---|---|---|
-| `OLLAMA_BASE` | `http://localhost:11434` | Ollama 服務位址 |
-| `OLLAMA_MODEL` | `gemma3:4b` | 模型名（可換 `gemma3:1b` / `qwen3.5:9b`） |
-| `OLLAMA_TIMEOUT` | `120` | 逾時秒數 |
-| `SERPAPI_KEY` | 空 | 填了才查競品價；不填→前端隱藏定價區 |
-| `MONGODB_URI` | 空 | 填了寫 Atlas；不填→寫本地 `demo/listings.json` |
+| `OLLAMA_BASE` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_MODEL` | `gemma3:4b` | Model name (can switch to `gemma3:1b` / `qwen3.5:9b`) |
+| `OLLAMA_TIMEOUT` | `120` | Request timeout in seconds |
+| `SERPAPI_KEY` | empty | Set it to look up competitor prices; if empty, the pricing block is hidden in the frontend |
+| `MONGODB_URI` | empty | Set it to write to Atlas; if empty, saves go to the local `demo/listings.json` |
+| `MONGODB_DB` | `sidehustle` | MongoDB database name |
 
-## 接通可選整合（SerpApi / MongoDB）
+## Wiring up the optional integrations (SerpApi / MongoDB)
 ```bash
-cp .env.example .env      # .env 已被 .gitignore，唔會 commit
-# 編輯 .env：填入 SERPAPI_KEY / MONGODB_URI
-uvicorn app.main:app --port 8000 &           # 記得填完 key 要重啟服務
-python3 scripts/verify_integrations.py       # 一鍵驗證 6 項（key / health / generate 定價 / save 存儲）
+cp .env.example .env      # .env is gitignored, so it is never committed
+# edit .env: fill in SERPAPI_KEY / MONGODB_URI
+uvicorn app.main:app --port 8000 &           # remember to restart the server after adding keys
+python3 scripts/verify_integrations.py       # one-shot check of 6 items (keys / health / generate pricing / save storage)
 ```
-全部 PASS = SerpApi 定價層同 MongoDB 存檔真有實證；任何 FAIL 會講明原因。
+All PASS means the SerpApi pricing layer and MongoDB storage are genuinely wired up; any FAIL states the reason.
 
-## Demo Script（評委现场走位，5 步）
+## Try the demo in 5 steps
 ```bash
-# 1. 起 Ollama（App 已開即跳過）
-# 2. 起服務
+# 1. Start Ollama (skip if the desktop app is already running)
+# 2. Start the server
 uvicorn app.main:app --port 8000
-# 3. 暖機：起完立即预热一次，避免評委第一次點 Generate 等冷啟動
+# 3. Warm-up: fire one request right after start-up, so the first click isn't a cold start
 curl -X POST http://localhost:8000/api/generate -H 'Content-Type: application/json' -d '{"keywords":"ceramic mug","platform":"Etsy","tone":"friendly"}'
 ```
-4. 開前端 `http://localhost:8000`，先按「**Demo**」掣用離線樣本 `demo/sample_outputs.json` 開局（秒開、斷網都得）。
-5. 再現場 Generate 一個新 keyword，俾評委睇真係本地模型實跑。
+4. Open `http://localhost:8000` and click **Demo** first to open with the offline sample `demo/sample_outputs.json` (instant, works even offline).
+5. Then generate a fresh listing with a new keyword, so you can see the local model run for real.
 
-**冷啟動說明**：模型首次加載約 15s、暖機後約 6–7s；demo 時先按步驟 3 預熱或直接用 Demo 掣開場。
+**Cold start**: the model takes ~15s to load the first time and ~6–7s once warm; warm it up with step 3 or open from the Demo button.
 
 ## Deploy to Render (demo mode)
 
@@ -112,17 +114,17 @@ works end-to-end:
 
 ### Notes
 - Render free tier spins down after ~15 min of inactivity; the next request is a cold start.
-  `.github/workflows/keepalive.yml` pings `/health` every 5 minutes to keep the demo awake
-  during judging — delete that workflow if you'd rather let the instance sleep.
+  `.github/workflows/keepalive.yml` pings `/health` every 5 minutes to keep the hosted demo
+  responsive — delete that workflow if you'd rather let the instance sleep.
 - `OLLAMA_BASE` is intentionally unreachable in demo mode so the failure is honest and instant
   (the TCP connect is capped at 5s in `app/ollama_client.py`, so it never hangs).
 
-## 已知缺陷
-- SerpApi 競品價需手動填 key 才啟用；無 key 時定價區隱藏（正確降級，非 bug）。
-- MongoDB Atlas 需填 `MONGODB_URI`；未填時存檔落本地 JSON（正確降級）。
-- 模型首次載入可能稍慢；`OLLAMA_TIMEOUT` 預設 120s 已留足緩衝。
+## Known limitations
+- SerpApi competitor pricing needs a key to be enabled; without one the pricing block is hidden (intended graceful degradation, not a bug).
+- MongoDB Atlas needs `MONGODB_URI`; without it, saves fall back to local JSON (intended graceful degradation).
+- The model can be slow to load the first time; the default `OLLAMA_TIMEOUT` of 120s leaves plenty of headroom.
 
-## 為什麼「開源」是核心（三條論據）
-1. **零邊際成本**：Gemma 開源模型本地推理，生成 1 萬條 listing 的 API 成本 = $0，純副手生意毛利率極高。
-2. **資料不出機**：賣家的商品關鍵字、文案全在 Ollama 離機跑，無隱私洩露風險，對小賣家信任門檻低。
-3. **可自托管、可改提示**：開源讓使用者可換模型、改 prompt、塞自己的品牌語氣，形成護城河而非被封鎖在單一 API。
+## Why open-source is core to this project
+1. **Zero marginal cost**: the open-source Gemma model runs locally, so generating 10,000 listings costs $0 in API fees — a side-hustle tool with very high gross margin.
+2. **Data never leaves the machine**: a seller's keywords and copy run entirely through local Ollama, so there is no privacy exposure and the trust bar for small sellers is low.
+3. **Self-hostable and prompt-editable**: being open-source lets users swap models, edit the prompt and inject their own brand tone — a moat, rather than being locked into a single API.
