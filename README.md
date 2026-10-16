@@ -128,7 +128,7 @@ works end-to-end:
 
 ## Why open-source is core to this project
 1. **Zero marginal cost**: the open-source Gemma model runs locally, so generating 10,000 listings costs $0 in API fees — a side-hustle tool with very high gross margin.
-2. **Data never leaves the machine**: a seller's keywords and copy run entirely through local Ollama, so there is no privacy exposure and the trust bar for small sellers is low.
+2. **No prompt ever reaches a hosted LLM**: a seller's keywords and copy run entirely through local Ollama, so there is no "we may train on your prompts" exposure and the trust bar for small sellers stays low. The only outbound traffic is the two optional integrations — a SerpApi price lookup and a MongoDB save — and both stay off until you add keys.
 3. **Self-hostable and prompt-editable**: being open-source lets users swap models, edit the prompt and inject their own brand tone — a moat, rather than being locked into a single API.
 
 ## License
