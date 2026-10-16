@@ -1,6 +1,7 @@
-"""Ollama 本地推理客戶端：呼叫 /api/chat，JSON mode，回傳結構化 Listing。
+"""Local Ollama inference client: calls /api/chat in JSON mode and returns a structured Listing.
 
-健壯性：Ollama 未啟動 / 模型缺失 / 超時 → 拋出 OllamaError，由上層轉成友善訊息。
+Robustness: Ollama not started / missing model / timeout -> raises OllamaError, which the
+layer above turns into a friendly message.
 """
 from __future__ import annotations
 
@@ -23,20 +24,20 @@ CONNECT_TIMEOUT = float(os.getenv("OLLAMA_CONNECT_TIMEOUT", "5"))
 
 
 class OllamaError(Exception):
-    """Ollama 呼叫失敗時拋出，附帶可讀訊息。"""
+    """Raised when an Ollama call fails, with a readable message."""
 
 
 def _extract_json(text: str) -> dict:
-    """從模型輸出抽出 JSON（容忍前後雜訊 / markdown code fence）。"""
+    """Extract JSON from the model output (tolerating surrounding noise / markdown code fences)."""
     text = text.strip()
-    # 去掉 ```json ... ``` 包裹
+    # Strip a ```json ... ``` wrapper
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fence:
         text = fence.group(1)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        # 嘗試抓第一個 { ... } 區塊
+        # Try to grab the first { ... } block
         m = re.search(r"\{.*\}", text, re.DOTALL)
         if m:
             return json.loads(m.group(0))
@@ -44,7 +45,7 @@ def _extract_json(text: str) -> dict:
 
 
 def generate_listing(keywords: str, platform: str, tone: str) -> Listing:
-    """呼叫 Ollama 生成上架文案，回傳 Listing。失敗拋 OllamaError。"""
+    """Call Ollama to generate listing copy and return a Listing. Raises OllamaError on failure."""
     messages = build_messages(keywords, platform, tone)
     payload = {
         "model": OLLAMA_MODEL,
@@ -63,32 +64,32 @@ def generate_listing(keywords: str, platform: str, tone: str) -> Listing:
             resp = client.post(f"{OLLAMA_BASE}/api/chat", json=payload)
     except httpx.ConnectError as e:
         raise OllamaError(
-            f"無法連線 Ollama（{OLLAMA_BASE}）。請確認 Ollama 服務已啟動。"
+            f"Could not connect to Ollama ({OLLAMA_BASE}). Make sure the Ollama service is running."
         ) from e
     except httpx.ConnectTimeout as e:
         # Connect phase exceeded CONNECT_TIMEOUT (host reachable-but-unresponsive / blackholed).
         raise OllamaError(
-            f"連線 Ollama 逾時（{OLLAMA_BASE}，連線階段 >{CONNECT_TIMEOUT:.0f}s）。"
+            f"Timed out connecting to Ollama ({OLLAMA_BASE}, connect phase >{CONNECT_TIMEOUT:.0f}s)."
         ) from e
     except httpx.TimeoutException as e:
-        raise OllamaError(f"Ollama 回應超時（>{REQUEST_TIMEOUT:.0f}s），請稍後重試。") from e
+        raise OllamaError(f"Ollama response timed out (>{REQUEST_TIMEOUT:.0f}s); please try again later.") from e
 
     if resp.status_code == 404:
         raise OllamaError(
-            f"模型 `{OLLAMA_MODEL}` 不存在。請執行 `ollama pull {OLLAMA_MODEL}`。"
+            f"Model `{OLLAMA_MODEL}` not found. Run `ollama pull {OLLAMA_MODEL}`."
         )
     if resp.status_code >= 400:
-        raise OllamaError(f"Ollama 回傳錯誤 {resp.status_code}: {resp.text[:200]}")
+        raise OllamaError(f"Ollama returned error {resp.status_code}: {resp.text[:200]}")
 
     data = resp.json()
     content = (data.get("message") or {}).get("content", "")
     if not content:
-        raise OllamaError("Ollama 回傳空內容。")
+        raise OllamaError("Ollama returned an empty response.")
 
     try:
         obj = _extract_json(content)
     except (json.JSONDecodeError, ValueError) as e:
-        raise OllamaError(f"無法解析模型輸出的 JSON：{content[:200]}") from e
+        raise OllamaError(f"Could not parse the model's JSON output: {content[:200]}") from e
 
     title = str(obj.get("title", "")).strip()
     description = str(obj.get("description", "")).strip()
@@ -98,13 +99,13 @@ def generate_listing(keywords: str, platform: str, tone: str) -> Listing:
     tags = [str(t).strip().lstrip("#").lower() for t in tags if str(t).strip()]
 
     if not title or not description:
-        raise OllamaError("模型輸出缺少 title 或 description。")
+        raise OllamaError("Model output is missing title or description.")
 
     return Listing(title=title, description=description, tags=tags)
 
 
 def ollama_health() -> dict:
-    """檢查 Ollama 服務與目標模型是否就緒。"""
+    """Check whether the Ollama service and the target model are ready."""
     try:
         with httpx.Client(timeout=5) as client:
             resp = client.get(f"{OLLAMA_BASE}/api/tags")

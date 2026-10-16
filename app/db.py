@@ -1,6 +1,6 @@
-"""存檔加層：有 MONGODB_URI 時寫 Atlas，否則寫本地 demo/listings.json。
+"""Storage layer: writes to Atlas when MONGODB_URI is set, otherwise to the local demo/listings.json.
 
-無 URI 也永遠成功（no-op 降級），保證 demo 的 Save 按鈕一定有回饋。
+With no URI it always succeeds (no-op degradation), so the demo's Save button always gives feedback.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ _LOCAL_PATH = Path(__file__).resolve().parent.parent / "demo" / "listings.json"
 
 
 def _save_local(listing: Listing) -> str:
-    """寫本地 JSON 檔，回傳 id。"""
+    """Write the local JSON file and return the id."""
     _LOCAL_PATH.parent.mkdir(parents=True, exist_ok=True)
     records = []
     if _LOCAL_PATH.exists():
@@ -42,7 +42,7 @@ def _save_local(listing: Listing) -> str:
 
 
 def save_listing(listing: Listing) -> str:
-    """存一筆 listing，回傳 id。優先 Mongo，失敗或無 URI → 本地 JSON。"""
+    """Save a listing and return its id. Prefers Mongo; on failure or no URI -> local JSON."""
     if MONGODB_URI:
         try:
             from pymongo import MongoClient
@@ -58,13 +58,13 @@ def save_listing(listing: Listing) -> str:
             }
             result = col.insert_one(doc)
             return str(result.inserted_id)
-        except Exception:  # noqa: BLE001 —— Mongo 失敗就降級本地
+        except Exception:  # noqa: BLE001 -- fall back to local storage if Mongo fails
             return _save_local(listing)
     return _save_local(listing)
 
 
 def storage_backend() -> str:
-    """回報目前存檔後端，供 /health 顯示。"""
+    """Report the current storage backend, shown by /health."""
     if MONGODB_URI:
         try:
             from pymongo import MongoClient

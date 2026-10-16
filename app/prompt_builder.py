@@ -1,4 +1,4 @@
-"""組裝給 Ollama /api/chat 的 messages，針對 Etsy/eBay 賣家場景。"""
+"""Build the messages for Ollama /api/chat, tailored to the Etsy/eBay seller use case."""
 from __future__ import annotations
 
 _SYSTEM = (
@@ -22,7 +22,7 @@ _TONE_HINT = {
 
 
 def build_messages(keywords: str, platform: str, tone: str) -> list[dict]:
-    """回傳 Ollama chat 用的 messages 陣列。"""
+    """Return the messages array used by the Ollama chat call."""
     platform = (platform or "Etsy").strip()
     tone = (tone or "friendly").strip().lower()
     tone_desc = _TONE_HINT.get(tone, _TONE_HINT["friendly"])

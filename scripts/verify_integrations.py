@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""一鍵驗證 Listing Copilot 嘅可選整合（SerpApi 定價層 / MongoDB 存檔）。
+"""One-shot verifier for Listing Copilot's optional integrations (SerpApi pricing / MongoDB storage).
 
-用法：
+Usage:
     python3 scripts/verify_integrations.py [--base http://localhost:8000]
 
-檢查項目：
-    1. .env 入面 SERPAPI_KEY / MONGODB_URI 有冇填
-    2. GET  /health          → serpapi_enabled / storage 係咩模式
-    3. POST /api/generate    → price_stats 有冇真數據（證明 SerpApi 接通）
-    4. POST /api/save        → storage 係 mongodb 定 local-json（證明 MongoDB 接通）
+Checks:
+    1. Whether SERPAPI_KEY / MONGODB_URI are set in .env
+    2. GET  /health          -> serpapi_enabled / storage mode
+    3. POST /api/generate    -> whether price_stats has real data (proves SerpApi is wired up)
+    4. POST /api/save        -> whether storage is mongodb or local-json (proves MongoDB is wired up)
 
-任何一項 FAIL 都會講明原因。全部 PASS →  exit 0。
+Any FAIL explains why. All PASS -> exit 0.
 """
 import argparse
 import json
@@ -63,45 +63,45 @@ def main():
     print(f"API base : {base}\n")
 
     env = load_env_keys()
-    missing = "" if env_found else f"（搵唔到 {_ENV_PATH}）"
+    missing = "" if env_found else f" ({_ENV_PATH} not found)"
     serp_key = bool(env.get("SERPAPI_KEY"))
     mongo_uri = bool(env.get("MONGODB_URI"))
-    results.append((".env SERPAPI_KEY 已填", serp_key,
-                    f"未填{missing} → 定價層會自動隱藏（要報 SerpApi 分類必須填）" if not serp_key else "OK"))
-    results.append((".env MONGODB_URI 已填", mongo_uri,
-                    f"未填{missing} → 存檔會降級到本地 JSON（要報 MongoDB 分類必須填）" if not mongo_uri else "OK"))
+    results.append((".env SERPAPI_KEY set", serp_key,
+                    f"not set{missing} -> the pricing layer is auto-hidden (fill it to qualify for the SerpApi category)" if not serp_key else "OK"))
+    results.append((".env MONGODB_URI set", mongo_uri,
+                    f"not set{missing} -> saves fall back to local JSON (fill it to qualify for the MongoDB category)" if not mongo_uri else "OK"))
 
     try:
         health = req("GET", base, "/health", timeout=10)
     except Exception as e:
-        print(f"FAIL: 連唔到 {base}（服務起咗未？uvicorn app.main:app --port 8000）\n  {e}")
+        print(f"FAIL: cannot reach {base} (is the server running? uvicorn app.main:app --port 8000)\n  {e}")
         return 1
     serp_on = bool(health.get("serpapi_enabled"))
     storage = health.get("storage", "?")
     results.append(("/health serpapi_enabled", serp_on,
-                    "服務讀到 SERPAPI_KEY" if serp_on else "服務未讀到 key（.env 填咗要重啟服務）"))
-    results.append(("/health storage 模式", storage in ("mongodb", "mongo"),
-                    f"storage={storage}（mongodb=接通 Atlas；local-json=未接）"))
+                    "the server read SERPAPI_KEY" if serp_on else "the server did not read the key (restart the server after editing .env)"))
+    results.append(("/health storage mode", storage in ("mongodb", "mongo"),
+                    f"storage={storage} (mongodb=Atlas wired up; local-json=not wired up)"))
 
     try:
         gen = req("POST", base, "/api/generate",
                   {"keywords": KEYWORDS, "platform": "Etsy", "tone": "friendly"})
         ps = gen.get("price_stats")
-        results.append(("/api/generate price_stats 有數據", bool(ps),
-                        "SerpApi 真接通" if ps else "price_stats=null → SerpApi 未接通（key 未填或查詢失敗）"))
+        results.append(("/api/generate price_stats has data", bool(ps),
+                        "SerpApi is really wired up" if ps else "price_stats=null -> SerpApi not wired up (key missing or query failed)"))
         print(f"  generate: elapsed={gen.get('elapsed_sec')}s model={gen.get('model')} price_stats={ps}")
     except Exception as e:
-        results.append(("/api/generate", False, f"呼叫失敗：{e}"))
+        results.append(("/api/generate", False, f"call failed: {e}"))
 
     try:
         save = req("POST", base, "/api/save",
                    {"keywords": KEYWORDS, "title": "verify run", "description": "n/a",
                     "tags": ["verify"], "platform": "Etsy"})
         st = save.get("storage")
-        results.append(("/api/save 落入正確存儲", st in ("mongodb", "mongo"),
-                        f"storage={st}（mongodb=入咗 Atlas；local-json=本地兜底）"))
+        results.append(("/api/save writes to the right storage", st in ("mongodb", "mongo"),
+                        f"storage={st} (mongodb=written to Atlas; local-json=local fallback)"))
     except Exception as e:
-        results.append(("/api/save", False, f"呼叫失敗：{e}"))
+        results.append(("/api/save", False, f"call failed: {e}"))
 
     print()
     ok = True
@@ -109,8 +109,8 @@ def main():
         print(f"{'PASS' if passed else 'FAIL'}  {name}  — {note}")
         ok = ok and passed
     print()
-    print("結論：" + ("全部接通，Prize Categories（SerpApi / MongoDB）有實證支撐。"
-                   if ok else "有項目未接通——見上面 FAIL 原因。"))
+    print("Conclusion: " + ("everything wired up — the Prize Categories (SerpApi / MongoDB) are backed by evidence."
+                   if ok else "some items are not wired up — see the FAIL reasons above."))
     return 0 if ok else 1
 
 

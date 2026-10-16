@@ -1,6 +1,7 @@
-"""SerpApi 競品價查詢加層。
+"""SerpApi competitor-price lookup add-on.
 
-無 SERPAPI_KEY 時回傳 None → 前端隱藏定價區（優雅降級，絕不阻塞核心）。
+With no SERPAPI_KEY it returns None -> the frontend hides the pricing block
+(graceful degradation, never blocks the core path).
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ SERPAPI_URL = "https://serpapi.com/search.json"
 
 
 def get_competitor_prices(query: str) -> PriceStats | None:
-    """查競品價格，回傳統計。無 key 或失敗 → 回 None。"""
+    """Look up competitor prices and return stats. No key or a failure -> None."""
     if not SERPAPI_KEY:
         return None
 
@@ -33,7 +34,7 @@ def get_competitor_prices(query: str) -> PriceStats | None:
             resp = client.get(SERPAPI_URL, params=params)
             resp.raise_for_status()
             data = resp.json()
-    except Exception:  # noqa: BLE001 —— 任何失敗都降級為 None
+    except Exception:  # noqa: BLE001 -- any failure degrades to None
         return None
 
     prices: list[float] = []

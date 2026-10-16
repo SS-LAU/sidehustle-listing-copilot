@@ -1,4 +1,4 @@
-"""FastAPI 主程式：核心鏈路 POST /api/generate、GET /、GET /health、POST /api/save。"""
+"""FastAPI app: core pipeline POST /api/generate, plus GET /, GET /health and POST /api/save."""
 from __future__ import annotations
 
 import os
@@ -23,13 +23,13 @@ _STATIC = Path(__file__).resolve().parent / "static"
 
 @app.get("/")
 def index() -> FileResponse:
-    """Serve 單檔前端。"""
+    """Serve the single-file frontend."""
     return FileResponse(_STATIC / "index.html")
 
 
 @app.get("/demo/sample_outputs.json")
 def demo_sample() -> FileResponse:
-    """離線兜底：提供 demo/sample_outputs.json 給前端 Demo 按鈕。"""
+    """Offline fallback: serve demo/sample_outputs.json to the frontend Demo button."""
     path = Path(__file__).resolve().parent.parent / "demo" / "sample_outputs.json"
     if not path.exists():
         return FileResponse(content=b"[]", media_type="application/json")
@@ -38,7 +38,7 @@ def demo_sample() -> FileResponse:
 
 @app.get("/health")
 def health() -> dict:
-    """健康檢查：Ollama 狀態 + 存檔後端 + 是否有 SerpApi key。"""
+    """Health check: Ollama status + storage backend + whether a SerpApi key is set."""
     return {
         "status": "ok",
         "ollama": ollama_health(),
@@ -49,15 +49,15 @@ def health() -> dict:
 
 @app.post("/api/generate")
 def generate(req: GenerateRequest) -> JSONResponse:
-    """核心鏈路：關鍵字 → Ollama 生成 → 競品價（可選）。"""
+    """Core pipeline: keywords -> Ollama generation -> competitor prices (optional)."""
     start = time.time()
     try:
         listing = generate_listing(req.keywords, req.platform, req.tone)
     except OllamaError as e:
-        # 友善錯誤：HTTP 503，前端顯示提示不白屏
+        # Friendly error: HTTP 503 so the frontend shows a hint instead of a blank screen.
         return JSONResponse(
             status_code=503,
-            content={"error": str(e), "detail": "本地模型暫時無法回應，請重試或改用快取 demo。"},
+            content={"error": str(e), "detail": "The local model is temporarily unavailable; please retry or use the cached demo."},
         )
 
     price_stats = serp_client.get_competitor_prices(req.keywords)
@@ -75,14 +75,14 @@ def generate(req: GenerateRequest) -> JSONResponse:
 
 @app.post("/api/save")
 def save(req: SaveRequest) -> JSONResponse:
-    """存檔端點：前端把已生成的 listing 送回，存入 Mongo/本地 JSON。"""
+    """Save endpoint: the frontend sends back a generated listing to store in Mongo / local JSON."""
     from .schemas import Listing
 
     listing = Listing(title=req.title, description=req.description, tags=req.tags)
     try:
         new_id = db.save_listing(listing)
     except Exception as e:  # noqa: BLE001
-        return JSONResponse(status_code=500, content={"error": f"存檔失敗：{e}"})
+        return JSONResponse(status_code=500, content={"error": f"Save failed: {e}"})
     return JSONResponse(
         content={"ok": True, "id": new_id, "storage": db.storage_backend()}
     )
