@@ -1,5 +1,7 @@
 # Side Hustle · Listing Copilot
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
 > In one line: an AI listing-copy + pricing copilot for Etsy / eBay sellers — type in product keywords and a **local Gemma** model instantly writes a high-converting title / description / tags, running 100% on-device with zero API cost.
 
 ## Features
@@ -128,3 +130,7 @@ works end-to-end:
 1. **Zero marginal cost**: the open-source Gemma model runs locally, so generating 10,000 listings costs $0 in API fees — a side-hustle tool with very high gross margin.
 2. **Data never leaves the machine**: a seller's keywords and copy run entirely through local Ollama, so there is no privacy exposure and the trust bar for small sellers is low.
 3. **Self-hostable and prompt-editable**: being open-source lets users swap models, edit the prompt and inject their own brand tone — a moat, rather than being locked into a single API.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, ship it, sell it.
