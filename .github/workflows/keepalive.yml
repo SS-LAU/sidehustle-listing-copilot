@@ -1,9 +1,15 @@
 name: Keep the Render demo awake
 
 # Render's free tier spins a web service down after ~15 minutes with no traffic, and the
-# next request then takes 30-60s to cold-start. Anyone opening the live demo link shouldn't
-# hit that wait, so ping /health on a schedule. GitHub's shortest reliable cron interval is
-# 5 minutes, which is comfortably inside Render's 15-minute idle window.
+# next request then takes 30-60s to cold-start. This workflow pings /health on a schedule
+# so the demo is usually awake when someone opens the link.
+#
+# Reality check: GitHub runs scheduled workflows on a best-effort basis and heavily
+# throttles short intervals. Measured on this repo, a */5 cron actually fired every
+# 2-5 hours — nowhere near Render's 15-minute idle window. So treat this as a nudge,
+# not a guarantee: the first visitor after a quiet spell will still hit a cold start.
+# If you need the demo genuinely always-warm, point an external pinger (cron-job.org,
+# UptimeRobot) at /health every 10 minutes instead of relying on this cron.
 #
 # Notes:
 #   - GitHub disables scheduled workflows in public repos after 60 days without repository
@@ -27,14 +33,25 @@ concurrency:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Ping /health
         run: |
-          set -euo pipefail
+          set -uo pipefail
           URL="https://sidehustle-listing-copilot.onrender.com/health"
-          # -m 120 covers a cold start; --retry covers a transient error while booting.
-          code=$(curl -sS -o /dev/null -m 120 --retry 2 --retry-delay 10 \
-            -w '%{http_code}' "$URL")
-          echo "GET $URL -> HTTP $code"
+
+          # A cold start takes 30-60s (occasionally longer). A transient DNS or edge
+          # error fails *instantly*, and plain `--retry` does not retry a refused
+          # connection — that is exactly how run #11 died in under a second. So retry
+          # explicitly and never let a curl exit code abort the loop.
+          code=000
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /dev/null -m 90 -w '%{http_code}' "$URL" || true)
+            echo "attempt ${attempt}: GET ${URL} -> HTTP ${code}"
+            if [ "$code" = "200" ]; then break; fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+
+          # Still fails the job if all three attempts miss, so a genuinely dead demo
+          # is visible instead of silently green.
           test "$code" = "200"
